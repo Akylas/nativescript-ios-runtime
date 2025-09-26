@@ -1,3 +1,119 @@
+## [8.9.4](https://github.com/NativeScript/ios/compare/v8.9.2...v8.9.3) (2025-09-09)
+
+
+### Features
+
+- include dSYMs
+
+## [8.9.3](https://github.com/NativeScript/ios/compare/v8.9.2...v8.9.3) (2025-09-09)
+
+
+### Bug Fixes
+
+* **catalyst:** variable-length arrays ([#275](https://github.com/NativeScript/ios/issues/275)) ([6d3dfc2](https://github.com/NativeScript/ios/commit/6d3dfc2558e60da60a9f6cbb45cdfd272eefabe7))
+
+
+### Features
+
+* Xcode 26 
+* Ada 3.2.7 ([#279](https://github.com/NativeScript/ios/issues/279)) ([fb56643](https://github.com/NativeScript/ios/commit/fb56643b2ec0e41a10f3acf5633e59bcbd2b0514))
+* improve robustness of linking with clang path checks ([#280](https://github.com/NativeScript/ios/issues/280)) ([debc76d](https://github.com/NativeScript/ios/commit/debc76dfd143d26956180c35c8a96534dd7ad152))
+* opt for os_log with graceful backwards compat fallback ([#278](https://github.com/NativeScript/ios/issues/278)) ([3c5d894](https://github.com/NativeScript/ios/commit/3c5d894e670bcb9ef7c48446b6c565a196f0cfd2))
+* search sub framework paths in metadata generator ([#277](https://github.com/NativeScript/ios/issues/277)) ([7bd239f](https://github.com/NativeScript/ios/commit/7bd239fa43e3884bffe06a7fef6f39aa4a156e39))
+
+
+
+## [8.9.2](https://github.com/NativeScript/ios/compare/v8.9.1...v8.9.2) (2025-03-11)
+
+
+### Bug Fixes
+
+* Intel simulators ([#272](https://github.com/NativeScript/ios/issues/272)) ([0adeabf](https://github.com/NativeScript/ios/commit/0adeabf24aab579bdc10900495a46e9b8287b5d9))
+
+
+### Reverts
+
+* "feat: visionOS unit tests" ([f26d72c](https://github.com/NativeScript/ios/commit/f26d72c769c936b3ead647933f5da1af6c5c4434))
+
+
+
+## [8.9.1](https://github.com/NativeScript/ios/compare/v8.9.0...v8.9.1) (2025-02-28)
+
+
+### Features
+
+* Ada 3.1.3 ([#270](https://github.com/NativeScript/ios/issues/270)) ([7081e5a](https://github.com/NativeScript/ios/commit/7081e5a50ee34f1d9edc1a6c3ae8a0cdbace30ec))
+
+
+
+# [8.9.0](https://github.com/NativeScript/ios/compare/v8.8.2...v8.9.0) (2025-02-24)
+
+
+### Bug Fixes
+
+* handle gc protection in runtime run loop ([#264](https://github.com/NativeScript/ios/issues/264)) ([5e8214d](https://github.com/NativeScript/ios/commit/5e8214dc7fffa91abd6c870b294259583ec50ce7))
+* possible race condition extending native class ([8b932a3](https://github.com/NativeScript/ios/commit/8b932a31fe735c69b9d72b76eb106037653764ce))
+* **URL:** allow undefined 2nd args and fix pathname return value ([#263](https://github.com/NativeScript/ios/issues/263)) ([4219038](https://github.com/NativeScript/ios/commit/42190388ddfbd42ad3b87244f5f317860f43c327))
+
+
+### Features
+
+* ada 3.1.1 including URLPattern support ([#268](https://github.com/NativeScript/ios/issues/268)) ([08d4406](https://github.com/NativeScript/ios/commit/08d4406d36545117a5a7be2db900394f106c4ec2))
+* latest jsi updates ([#267](https://github.com/NativeScript/ios/issues/267)) ([d4f3b68](https://github.com/NativeScript/ios/commit/d4f3b680ba77823d9e03b82548ead26706993b99))
+* use monotonic time for performance object ([8b320a4](https://github.com/NativeScript/ios/commit/8b320a4b15a216d27d43acfda44cd068d84f6e65))
+* visionOS unit tests ([#257](https://github.com/NativeScript/ios/issues/257)) ([ac52442](https://github.com/NativeScript/ios/commit/ac524426242049db2844576cc4f6d4f8776e71d5))
+
+
+
+## [8.8.3-alpha.0](https://github.com/NativeScript/ios/compare/v8.8.2...v8.8.3-alpha.0) (2024-12-05)
+
+
+### Bug Fixes
+
+* handle gc protection in runtime run loop ([78b5e37](https://github.com/NativeScript/ios/commit/78b5e3799f1305b3eafe7d3deb60a7e56b86b230))
+* possible race condition extending native class ([8b932a3](https://github.com/NativeScript/ios/commit/8b932a31fe735c69b9d72b76eb106037653764ce))
+
+
+
+## [8.8.2](https://github.com/NativeScript/ios/compare/v8.8.1...v8.8.2) (2024-09-06)
+
+
+### Bug Fixes
+
+* ensure same mtime for js and code cache to prevent loading old code caches ([#261](https://github.com/NativeScript/ios/issues/261)) ([055b042](https://github.com/NativeScript/ios/commit/055b0427cf49e7c4cb37991c9419b899868b6bbd))
+* revert visionOS changes to iOS project template ([55c5c51](https://github.com/NativeScript/ios/commit/55c5c5198f04ff2b5cbe1be6f5add92acb3ed23f))
+
+
+
+## [8.8.1](https://github.com/NativeScript/ios/compare/v8.8.0...v8.8.1) (2024-07-10)
+
+
+### Features
+
+* Ada 2.9 ([#256](https://github.com/NativeScript/ios/issues/256)) ([d16b144](https://github.com/NativeScript/ios/commit/d16b14436bddac42a12a4bddff92d2bc37dc8669))
+
+
+
+# [8.8.0](https://github.com/NativeScript/ios/compare/v8.7.2...v8.8.0) (2024-07-09)
+
+
+### Bug Fixes
+
+* ensure copy rule copy *.hpp headers ([3b13e9d](https://github.com/NativeScript/ios/commit/3b13e9dce88015c1e8eab29b9b0c7ec104b4f4d2))
+
+
+### Features
+
+* add `[@deprecation](https://github.com/deprecation)` and `[@since](https://github.com/since)` docs ([#246](https://github.com/NativeScript/ios/issues/246)) ([daceac1](https://github.com/NativeScript/ios/commit/daceac129d3b73c46a6de4f557d6c06a0621890f))
+* add protocol information to native types ([#247](https://github.com/NativeScript/ios/issues/247)) ([6286203](https://github.com/NativeScript/ios/commit/6286203ca5293f4a9bec536ee6af7415d8d4d8f5))
+* allow embedding into existing apple host projects ([#231](https://github.com/NativeScript/ios/issues/231)) ([7ab180a](https://github.com/NativeScript/ios/commit/7ab180a7c8788216126abbb985d72332b064217a))
+* expose __dateTimeConfigurationChangeNotification ([#220](https://github.com/NativeScript/ios/issues/220)) ([5088f5f](https://github.com/NativeScript/ios/commit/5088f5fff231023a722a4626e73661ff6b9ad9fd))
+* JSI support for BigInt, Initial TypedArrays & ArrayBuffer creation ([#204](https://github.com/NativeScript/ios/issues/204)) ([4cd869d](https://github.com/NativeScript/ios/commit/4cd869dd678cf875b31efa4b7a75ee0f571ce096))
+* use messaging object to pass message to workers ([#233](https://github.com/NativeScript/ios/issues/233)) ([7ded0c3](https://github.com/NativeScript/ios/commit/7ded0c38bb891b340bd8e1c5137e607447e26e60))
+* xcode 16 support ([#254](https://github.com/NativeScript/ios/issues/254)) ([6ec9a8f](https://github.com/NativeScript/ios/commit/6ec9a8fe7888780d7394a1e21c1041619212be1f))
+
+
+
 ## [8.7.2](https://github.com/NativeScript/ios/compare/v8.7.1...v8.7.2) (2024-05-16)
 
 

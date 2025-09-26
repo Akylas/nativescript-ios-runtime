@@ -39,6 +39,10 @@ void Console::AttachInspectorClient(v8_inspector::JsV8InspectorClient* aInspecto
     inspector = aInspector;
 }
 
+void Console::DetachInspectorClient() {
+    inspector = nullptr;
+}
+
 void Console::SplitAndLogInChunks(std::string message) {
     auto messageLength = message.length();
     int maxStringLength = 1000; // technically 1024, but let's have some room :)
