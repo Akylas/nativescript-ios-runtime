@@ -62,9 +62,14 @@ jobs:
         if: ${{ contains(github.ref, 'refs/tags/') }}
         run: |
           # Extract version from tag (e.g., refs/tags/v8.9.6 -> 8.9.6)
+          # Validates that tag starts with 'v' prefix
+          if [[ ! $GITHUB_REF =~ ^refs/tags/v ]]; then
+            echo "Error: Tag must start with 'v' prefix (e.g., v8.9.6)"
+            exit 1
+          fi
           NPM_VERSION=${GITHUB_REF#refs/tags/v}
           echo NPM_VERSION=$NPM_VERSION >> $GITHUB_ENV
-          # Update package.json directly to avoid running version script
+          # Update package.json version field directly to avoid running version script
           node -e "const fs = require('fs'); const pkg = require('./package.json'); pkg.version = '$NPM_VERSION'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');"
       - name: Bump version for dev release
         if: ${{ !contains(github.ref, 'refs/tags/') }}
@@ -76,7 +81,7 @@ jobs:
         if: ${{ contains(github.ref, 'refs/tags/') }}
         run: |
           git config user.name "GitHub Actions Bot"
-          git config user.email "<>"
+          git config user.email "actions@github.com"
           git add package.json
           git commit -m "chore: update version to $NPM_VERSION [skip ci]"
       - name: Output NPM Version and tag
