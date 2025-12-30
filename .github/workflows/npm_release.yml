@@ -81,13 +81,13 @@ jobs:
       - name: Commit package.json version change
         if: ${{ contains(github.ref, 'refs/tags/') }}
         run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-          git add package.json
           # Only commit if there are changes
-          if git diff --staged --quiet; then
+          if git diff --quiet package.json; then
             echo "No changes to package.json, skipping commit"
           else
+            git config user.name "GitHub Actions Bot"
+            git config user.email "actions@github.com"
+            git add package.json
             git commit -m "chore: update version to $NPM_VERSION [skip ci]"
           fi
       - name: Output NPM Version and tag
