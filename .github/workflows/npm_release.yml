@@ -188,6 +188,7 @@ jobs:
     needs:
       - build
       - test
+      - publish
     env:
       NPM_VERSION: ${{needs.build.outputs.npm_version}}
     steps:
@@ -214,8 +215,8 @@ jobs:
       - name: Zip dSYMs
         working-directory: dist/dSYMs
         run: find . -maxdepth 1 -name '*.dSYM' -print | xargs -I@ zip -r @.zip @
-      - name: Partial Changelog
-        run: npx conventional-changelog -p angular -r2 > body.md
+      - name: Generate Changelog
+        run: npx conventional-changelog -p angular -r 1 > body.md
       - uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
         with:
           artifacts: "dist/akylas-nativescript-ios-runtime-*.tgz,dist/dSYMs/*.zip"
