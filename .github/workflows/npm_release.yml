@@ -58,12 +58,38 @@ jobs:
         run: |
           NPM_VERSION=$(node -e "console.log(require('./package.json').version);")
           echo NPM_VERSION=$NPM_VERSION >> $GITHUB_ENV
+      - name: Bump version for tag release
+        if: ${{ contains(github.ref, 'refs/tags/') }}
+        run: |
+          # Extract version from tag (e.g., refs/tags/v8.9.6 -> 8.9.6)
+          # Validates that tag starts with 'v' prefix
+          if [[ ! $GITHUB_REF =~ ^refs/tags/v ]]; then
+            echo "Error: Tag must start with 'v' prefix (e.g., v8.9.6)"
+            exit 1
+          fi
+          NPM_VERSION=${GITHUB_REF#refs/tags/v}
+          echo NPM_VERSION=$NPM_VERSION >> $GITHUB_ENV
+          # Update package.json version field directly to avoid running version script
+          # Using environment variable to prevent command injection
+          NEW_VERSION="$NPM_VERSION" node -e "const fs = require('fs'); const pkg = require('./package.json'); pkg.version = process.env.NEW_VERSION; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');"
       - name: Bump version for dev release
         if: ${{ !contains(github.ref, 'refs/tags/') }}
         run: |
           NPM_VERSION=$(node ./scripts/get-next-version.js)
           echo NPM_VERSION=$NPM_VERSION >> $GITHUB_ENV
           npm version $NPM_VERSION --no-git-tag-version
+      - name: Commit package.json version change
+        if: ${{ contains(github.ref, 'refs/tags/') }}
+        run: |
+          # Only commit if there are changes
+          if git diff --quiet package.json; then
+            echo "No changes to package.json, skipping commit"
+          else
+            git config user.name "GitHub Actions Bot"
+            git config user.email "actions@github.com"
+            git add package.json
+            git commit -m "chore: update version to $NPM_VERSION [skip ci]"
+          fi
       - name: Output NPM Version and tag
         id: npm_version_output
         run: |

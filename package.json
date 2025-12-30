@@ -1,7 +1,7 @@
 {
   "name": "@akylas/nativescript-ios-runtime",
   "description": "NativeScript Runtime for iOS",
-  "version": "8.9.5",
+  "version": "8.9.7",
   "keywords": [
     "NativeScript",
     "iOS",
