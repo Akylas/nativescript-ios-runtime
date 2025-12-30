@@ -70,7 +70,8 @@ jobs:
           NPM_VERSION=${GITHUB_REF#refs/tags/v}
           echo NPM_VERSION=$NPM_VERSION >> $GITHUB_ENV
           # Update package.json version field directly to avoid running version script
-          node -e "const fs = require('fs'); const pkg = require('./package.json'); pkg.version = '$NPM_VERSION'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');"
+          # Using environment variable to prevent command injection
+          NEW_VERSION="$NPM_VERSION" node -e "const fs = require('fs'); const pkg = require('./package.json'); pkg.version = process.env.NEW_VERSION; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');"
       - name: Bump version for dev release
         if: ${{ !contains(github.ref, 'refs/tags/') }}
         run: |
@@ -83,7 +84,12 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add package.json
-          git commit -m "chore: update version to $NPM_VERSION [skip ci]"
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to package.json, skipping commit"
+          else
+            git commit -m "chore: update version to $NPM_VERSION [skip ci]"
+          fi
       - name: Output NPM Version and tag
         id: npm_version_output
         run: |
