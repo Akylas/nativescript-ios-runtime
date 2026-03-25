@@ -6,6 +6,7 @@
 #include "runtime/Helpers.h"
 #include "runtime/Runtime.h"
 #include "runtime/Tasks.h"
+#include "runtime/Caches.h"
 
 using namespace v8;
 using namespace tns;

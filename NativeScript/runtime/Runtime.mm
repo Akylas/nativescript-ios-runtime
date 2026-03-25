@@ -265,7 +265,8 @@ void Runtime::RunScript(const std::string script) {
 
 Local<Value> Runtime::RunScriptWithResult(const std::string script) {
   Isolate* isolate = this->GetIsolate();
-  v8::Locker locker(isolate);
+  // Note: Caller is responsible for locking the isolate
+  // Do not add v8::Locker here to avoid double-locking
   Isolate::Scope isolate_scope(isolate);
   HandleScope handle_scope(isolate);
   MaybeLocal<Value> maybeResult = this->moduleInternal_->RunScriptWithResult(isolate, script);

@@ -336,10 +336,6 @@ MaybeLocal<Value> ModuleInternal::RunScriptWithResult(Isolate* isolate,
                                                      std::string script) {
   std::shared_ptr<Caches> cache = Caches::Get(isolate);
   Local<Context> context = cache->GetContext();
-  Local<Object> globalObject = context->Global();
-  Local<Value> requireObj;
-  bool success = globalObject->Get(context, ToV8String(isolate, "require")).ToLocal(&requireObj);
-  tns::Assert(success && requireObj->IsFunction(), isolate);
   return this->RunScriptString(isolate, context, script);
 }
 
