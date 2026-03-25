@@ -11,6 +11,12 @@
      runOnMainThread:(BOOL)runOnMainThread
            completion:(void(^)(id result, NSError* error))completion;
 
+// Execute a script file asynchronously with an argument and optional main thread execution
++ (void)runScriptFile:(NSString*)filePath
+             argument:(NSString*)argument
+     runOnMainThread:(BOOL)runOnMainThread
+           completion:(void(^)(id result, NSError* error))completion;
+
 // Helper to get the NativeScript runtime instance
 + (id)getRuntimeInstance;
 

@@ -266,4 +266,112 @@ describe("Async Script Execution API", function () {
     });
   });
 
+  // Tests for script argument functionality
+  
+  it("should pass a string argument to the script", function (done) {
+    const tempPath = NSTemporaryDirectory().stringByAppendingPathComponent("test-with-argument.js");
+    const scriptContent = "__scriptArgument";
+    NSString.stringWithString(scriptContent).writeToFileAtomicallyEncodingError(tempPath, true, NSUTF8StringEncoding, null);
+    
+    TNSAsyncScriptTester.runScriptFileArgumentRunOnMainThreadCompletion(tempPath, "Hello World", true, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBeDefined();
+      expect(result).toBe("Hello World");
+      done();
+    });
+  });
+
+  it("should access argument via global.__scriptArgument", function (done) {
+    const tempPath = NSTemporaryDirectory().stringByAppendingPathComponent("test-global-argument.js");
+    const scriptContent = "global.__scriptArgument";
+    NSString.stringWithString(scriptContent).writeToFileAtomicallyEncodingError(tempPath, true, NSUTF8StringEncoding, null);
+    
+    TNSAsyncScriptTester.runScriptFileArgumentRunOnMainThreadCompletion(tempPath, "Test Value", true, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBeDefined();
+      expect(result).toBe("Test Value");
+      done();
+    });
+  });
+
+  it("should work without argument when nil is passed", function (done) {
+    const tempPath = NSTemporaryDirectory().stringByAppendingPathComponent("test-nil-argument.js");
+    const scriptContent = "typeof __scriptArgument === 'undefined' ? 'undefined' : __scriptArgument";
+    NSString.stringWithString(scriptContent).writeToFileAtomicallyEncodingError(tempPath, true, NSUTF8StringEncoding, null);
+    
+    TNSAsyncScriptTester.runScriptFileArgumentRunOnMainThreadCompletion(tempPath, null, true, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBeDefined();
+      expect(result).toBe("undefined");
+      done();
+    });
+  });
+
+  it("should use argument in script logic", function (done) {
+    const tempPath = NSTemporaryDirectory().stringByAppendingPathComponent("test-argument-logic.js");
+    const scriptContent = "({ message: __scriptArgument, length: __scriptArgument.length })";
+    NSString.stringWithString(scriptContent).writeToFileAtomicallyEncodingError(tempPath, true, NSUTF8StringEncoding, null);
+    
+    TNSAsyncScriptTester.runScriptFileArgumentRunOnMainThreadCompletion(tempPath, "JavaScript", true, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBeDefined();
+      expect(result.objectForKey('message')).toBe("JavaScript");
+      expect(result.objectForKey('length')).toBe(10);
+      done();
+    });
+  });
+
+  it("should work with argument on background thread", function (done) {
+    const tempPath = NSTemporaryDirectory().stringByAppendingPathComponent("test-argument-background.js");
+    const scriptContent = "__scriptArgument + ' processed'";
+    NSString.stringWithString(scriptContent).writeToFileAtomicallyEncodingError(tempPath, true, NSUTF8StringEncoding, null);
+    
+    TNSAsyncScriptTester.runScriptFileArgumentRunOnMainThreadCompletion(tempPath, "Data", false, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBeDefined();
+      expect(result).toBe("Data processed");
+      expect(NSThread.isMainThread).toBe(false);
+      done();
+    });
+  });
+
+  it("should handle different argument values", function (done) {
+    let completedCount = 0;
+    const expectedCount = 3;
+    
+    const checkDone = function() {
+      completedCount++;
+      if (completedCount === expectedCount) {
+        done();
+      }
+    };
+    
+    // Test 1: Simple string
+    const tempPath1 = NSTemporaryDirectory().stringByAppendingPathComponent("test-arg-1.js");
+    NSString.stringWithString("__scriptArgument").writeToFileAtomicallyEncodingError(tempPath1, true, NSUTF8StringEncoding, null);
+    TNSAsyncScriptTester.runScriptFileArgumentRunOnMainThreadCompletion(tempPath1, "arg1", true, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBe("arg1");
+      checkDone();
+    });
+    
+    // Test 2: String with spaces
+    const tempPath2 = NSTemporaryDirectory().stringByAppendingPathComponent("test-arg-2.js");
+    NSString.stringWithString("__scriptArgument").writeToFileAtomicallyEncodingError(tempPath2, true, NSUTF8StringEncoding, null);
+    TNSAsyncScriptTester.runScriptFileArgumentRunOnMainThreadCompletion(tempPath2, "Hello World!", true, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBe("Hello World!");
+      checkDone();
+    });
+    
+    // Test 3: JSON-like string
+    const tempPath3 = NSTemporaryDirectory().stringByAppendingPathComponent("test-arg-3.js");
+    NSString.stringWithString("JSON.parse(__scriptArgument)").writeToFileAtomicallyEncodingError(tempPath3, true, NSUTF8StringEncoding, null);
+    TNSAsyncScriptTester.runScriptFileArgumentRunOnMainThreadCompletion(tempPath3, '{"key":"value"}', true, function(result, error) {
+      expect(error).toBeNull();
+      expect(result.objectForKey('key')).toBe("value");
+      checkDone();
+    });
+  });
+
 });

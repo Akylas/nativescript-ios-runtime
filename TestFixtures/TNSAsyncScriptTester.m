@@ -8,14 +8,21 @@ extern NativeScript* nativescript;
 
 + (void)runScriptFile:(NSString*)filePath 
            completion:(void(^)(id result, NSError* error))completion {
-    [self runScriptFile:filePath runOnMainThread:YES completion:completion];
+    [self runScriptFile:filePath argument:nil runOnMainThread:YES completion:completion];
 }
 
 + (void)runScriptFile:(NSString*)filePath
      runOnMainThread:(BOOL)runOnMainThread
            completion:(void(^)(id result, NSError* error))completion {
+    [self runScriptFile:filePath argument:nil runOnMainThread:runOnMainThread completion:completion];
+}
+
++ (void)runScriptFile:(NSString*)filePath
+             argument:(NSString*)argument
+     runOnMainThread:(BOOL)runOnMainThread
+           completion:(void(^)(id result, NSError* error))completion {
     if (nativescript) {
-        [nativescript runScriptFileAsync:filePath runOnMainThread:runOnMainThread completion:completion];
+        [nativescript runScriptFileAsync:filePath argument:argument runOnMainThread:runOnMainThread completion:completion];
     } else {
         NSError* error = [NSError errorWithDomain:@"TNSAsyncScriptTester" 
                                            code:1000 

@@ -119,11 +119,19 @@ std::unique_ptr<Runtime> runtime_;
 
 - (void)runScriptFileAsync:(NSString*)filePath 
                 completion:(void(^)(id result, NSError* error))completion {
-    // Call the extended method with runOnMainThread=YES to maintain backward compatibility
-    [self runScriptFileAsync:filePath runOnMainThread:YES completion:completion];
+    // Call the extended method with runOnMainThread=YES and nil argument to maintain backward compatibility
+    [self runScriptFileAsync:filePath argument:nil runOnMainThread:YES completion:completion];
 }
 
 - (void)runScriptFileAsync:(NSString*)filePath
+          runOnMainThread:(BOOL)runOnMainThread
+                completion:(void(^)(id result, NSError* error))completion {
+    // Call the extended method with nil argument to maintain backward compatibility
+    [self runScriptFileAsync:filePath argument:nil runOnMainThread:runOnMainThread completion:completion];
+}
+
+- (void)runScriptFileAsync:(NSString*)filePath
+                  argument:(NSString*)argument
           runOnMainThread:(BOOL)runOnMainThread
                 completion:(void(^)(id result, NSError* error))completion {
     if (!filePath || [filePath length] == 0) {
@@ -197,6 +205,19 @@ std::unique_ptr<Runtime> runtime_;
             v8::Locker locker(isolate);
             v8::Isolate::Scope isolate_scope(isolate);
             v8::HandleScope handle_scope(isolate);
+            
+            // Get the context to set the global variable
+            std::shared_ptr<tns::Caches> cache = tns::Caches::Get(isolate);
+            v8::Local<v8::Context> context = cache->GetContext();
+            v8::Context::Scope context_scope(context);
+            
+            // Set the __scriptArgument global variable if an argument is provided
+            if (argument) {
+                v8::Local<v8::String> argValue = tns::ToV8String(isolate, [argument UTF8String]);
+                v8::Local<v8::Object> global = context->Global();
+                v8::Local<v8::String> argName = tns::ToV8String(isolate, "__scriptArgument");
+                global->Set(context, argName, argValue).Check();
+            }
             
             // Execute the script
             v8::Local<v8::Value> result = runtime_->RunScriptWithResult(cppScript);
