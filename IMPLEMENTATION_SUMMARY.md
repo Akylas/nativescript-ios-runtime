@@ -2,7 +2,9 @@
 
 ## Overview
 
-This implementation adds a new asynchronous JavaScript script file execution API to the NativeScript iOS runtime. The API allows Objective-C and Swift developers to execute JavaScript files from a path and receive results via completion handlers. The API includes an optional parameter to control whether the completion handler is called on the main thread or the background thread.
+This implementation adds a new asynchronous JavaScript script file execution API to the NativeScript iOS runtime. The API allows Objective-C and Swift developers to execute JavaScript files from a path and receive results via completion handlers. The API includes optional parameters to:
+1. Control whether the completion handler is called on the main thread or the background thread
+2. Pass a string argument to the script that is easily accessible from JavaScript
 
 ## Changes Made
 
@@ -11,15 +13,19 @@ This implementation adds a new asynchronous JavaScript script file execution API
 #### NativeScript.h
 - Added standard method: `- (void)runScriptFileAsync:(NSString*)filePath completion:(void(^)(id result, NSError* error))completion`
 - Added extended method: `- (void)runScriptFileAsync:(NSString*)filePath runOnMainThread:(BOOL)runOnMainThread completion:(void(^)(id result, NSError* error))completion`
+- Added full method with argument: `- (void)runScriptFileAsync:(NSString*)filePath argument:(NSString*)argument runOnMainThread:(BOOL)runOnMainThread completion:(void(^)(id result, NSError* error))completion`
 - Comprehensive documentation explaining the API, parameters, and return types
 - The `runOnMainThread` parameter allows choosing between main thread (YES) or background thread (NO) completion
+- The `argument` parameter allows passing a string to the script, accessible as `__scriptArgument` in JavaScript
 
 #### NativeScript.mm
-- Implemented `runScriptFileAsync:completion:` as a convenience wrapper that calls the extended method with `runOnMainThread=YES`
-- Implemented `runScriptFileAsync:runOnMainThread:completion:` with:
+- Implemented `runScriptFileAsync:completion:` as a convenience wrapper that calls the full method with `runOnMainThread=YES` and `argument=nil`
+- Implemented `runScriptFileAsync:runOnMainThread:completion:` as a convenience wrapper that calls the full method with `argument=nil`
+- Implemented `runScriptFileAsync:argument:runOnMainThread:completion:` (full method) with:
   - Input validation (file path, runtime state)
   - Asynchronous file reading on background thread
   - V8 isolate locking for thread-safe script execution
+  - Setting `__scriptArgument` as a global variable in V8 context when argument is provided
   - JavaScript-to-Objective-C type conversion
   - Configurable completion handler callback (main thread or background thread based on parameter)
   - All error paths respect the `runOnMainThread` setting
@@ -42,49 +48,56 @@ This implementation adds a new asynchronous JavaScript script file execution API
 
 #### TestFixtures/TNSAsyncScriptTester.h/m
 - Created test helper class to expose the async API to JavaScript tests
-- Provides `runScriptFile:completion:` static method (defaults to main thread)
-- Provides `runScriptFile:runOnMainThread:completion:` static method (configurable thread)
+- Provides `runScriptFile:completion:` static method (defaults to main thread, no argument)
+- Provides `runScriptFile:runOnMainThread:completion:` static method (configurable thread, no argument)
+- Provides `runScriptFile:argument:runOnMainThread:completion:` static method (full configuration)
 - Accesses global `nativescript` instance from TestRunner
 
 #### TestFixtures/TestFixtures.h
 - Added import for `TNSAsyncScriptTester.h` to expose to tests
 
 #### TestRunner/app/tests/AsyncScriptExecutionTests.js
-- Comprehensive test suite with 18 test cases covering:
+- Comprehensive test suite with 24 test cases covering:
   - Basic data types (numbers, strings, booleans, null/undefined)
   - Complex types (objects, arrays)
   - Error handling (file not found, empty path, null path)
   - Concurrent execution (thread safety)
   - Complex expressions and data processing
   - Runtime errors and syntax errors
-  - Background thread completion (5 new tests)
+  - Background thread completion (5 tests)
+  - Script argument functionality (6 tests)
   - Thread context verification for both main and background threads
 
 ### 3. Documentation
 
 #### ASYNC_SCRIPT_API.md
 - Complete API documentation with:
-  - Standard and extended method signatures
-  - Parameters including the new `runOnMainThread` option
+  - Standard, extended, and full method signatures
+  - Parameters including `runOnMainThread` and `argument` options
   - Return types and conversions
   - Error codes and handling
-  - Usage examples in both Objective-C and Swift for both main and background thread modes
+  - JavaScript access to arguments via `__scriptArgument`
+  - Usage examples in both Objective-C and Swift for all modes
   - Threading notes and best practices
   - Performance considerations
 
 #### examples/AsyncScriptExample.swift
-- Comprehensive Swift examples demonstrating:
+- Comprehensive Swift examples (9 examples total) demonstrating:
   - Simple calculations
   - Object and array returns
   - Concurrent execution
   - Background thread completion for performance
   - Data processing on background thread
+  - Passing string arguments to scripts
+  - Passing JSON data as arguments
+  - Using arguments in script logic
   - Proper UI dispatch patterns
 
 #### examples/AsyncScriptExample.m
-- Comprehensive Objective-C examples with identical scenarios
+- Comprehensive Objective-C examples (11 examples total) with identical scenarios
 - Demonstrates idiomatic Objective-C patterns
 - Shows background thread completion examples
+- Includes argument passing examples with simple strings and JSON data
 
 ## Technical Design
 
@@ -214,13 +227,14 @@ Possible future improvements:
 
 ## Conclusion
 
-This implementation provides a robust, thread-safe, and well-documented API for asynchronous JavaScript script execution from native code with optional main thread completion. The implementation follows best practices for iOS development, includes comprehensive tests, and provides clear documentation for developers.
+This implementation provides a robust, thread-safe, and well-documented API for asynchronous JavaScript script execution from native code with optional main thread completion and argument passing. The implementation follows best practices for iOS development, includes comprehensive tests, and provides clear documentation for developers.
 
 ### Key Features
-- **Backward Compatible**: Existing code continues to work with default main thread completion
+- **Backward Compatible**: Existing code continues to work with default main thread completion and no argument
 - **Flexible Threading**: Optional `runOnMainThread` parameter for performance optimization
+- **Script Arguments**: Pass string arguments to scripts, accessible as `__scriptArgument` in JavaScript
 - **Type Safe**: Proper conversion between JavaScript and Objective-C types
-- **Well Tested**: 18 test cases covering all scenarios including thread verification
+- **Well Tested**: 24 test cases covering all scenarios including thread verification and argument passing
 - **Well Documented**: Complete API documentation with examples in both Swift and Objective-C
 
 ### Performance Benefits
@@ -229,3 +243,11 @@ When using `runOnMainThread=NO`, the completion handler executes on the backgrou
 - Allowing immediate processing of results without waiting for main thread
 - Reducing main thread load for non-UI operations
 - Enabling more efficient concurrent script execution
+
+### Argument Passing Benefits
+The script argument feature allows:
+- Passing dynamic data to scripts without file modification
+- Simple string arguments for basic use cases
+- JSON strings for complex data structures
+- Easy JavaScript access via `__scriptArgument` global variable
+- Runtime parameterization of script behavior
