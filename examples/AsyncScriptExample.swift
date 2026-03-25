@@ -108,6 +108,83 @@ class AsyncScriptExample {
         }
     }
     
+    /// Example 5: Execute script with background thread completion for performance
+    func executeWithBackgroundCompletion() {
+        let script = "(function() { return 42 * 2; })()"
+        let scriptPath = createTempScript(content: script)
+        
+        // Execute with completion on background thread
+        runtime.runScriptFileAsync(scriptPath, runOnMainThread: false) { result, error in
+            guard error == nil else {
+                print("Error: \(error!.localizedDescription)")
+                return
+            }
+            
+            // This runs on background thread
+            print("Result on background thread: \(result ?? "nil")")
+            
+            // If you need to update UI, dispatch to main thread
+            DispatchQueue.main.async {
+                print("Now on main thread for UI updates")
+            }
+        }
+    }
+    
+    /// Example 6: Data processing with background completion
+    func executeDataProcessingOnBackground() {
+        let script = """
+        (function() {
+            const data = Array.from({length: 1000}, (_, i) => i);
+            return data.reduce((sum, val) => sum + val, 0);
+        })()
+        """
+        let scriptPath = createTempScript(content: script)
+        
+        // Process data on background thread for better performance
+        runtime.runScriptFileAsync(scriptPath, runOnMainThread: false) { result, error in
+            guard error == nil else {
+                print("Error: \(error!.localizedDescription)")
+                return
+            }
+            
+            if let sum = result as? NSNumber {
+                print("Sum calculated on background: \(sum)")
+                // Result: 499500
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+        let scripts = [
+            "Math.sqrt(16)",
+            "'Concurrent execution'",
+            "[1, 2, 3].length"
+        ]
+        
+        var results: [String: Any] = [:]
+        let group = DispatchGroup()
+        
+        for (index, scriptContent) in scripts.enumerated() {
+            group.enter()
+            let scriptPath = createTempScript(content: scriptContent)
+            
+            runtime.runScriptFileAsync(scriptPath) { result, error in
+                defer { group.leave() }
+                
+                if let error = error {
+                    print("Script \(index) error: \(error.localizedDescription)")
+                    return
+                }
+                
+                results["script_\(index)"] = result
+            }
+        }
+        
+        group.notify(queue: .main) {
+            print("All scripts completed. Results: \(results)")
+        }
+    }
+    
     // MARK: - Helper Methods
     
     private func createTempScript(content: String) -> String {

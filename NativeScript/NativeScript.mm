@@ -119,14 +119,25 @@ std::unique_ptr<Runtime> runtime_;
 
 - (void)runScriptFileAsync:(NSString*)filePath 
                 completion:(void(^)(id result, NSError* error))completion {
+    // Call the extended method with runOnMainThread=YES to maintain backward compatibility
+    [self runScriptFileAsync:filePath runOnMainThread:YES completion:completion];
+}
+
+- (void)runScriptFileAsync:(NSString*)filePath
+          runOnMainThread:(BOOL)runOnMainThread
+                completion:(void(^)(id result, NSError* error))completion {
     if (!filePath || [filePath length] == 0) {
         if (completion) {
             NSError* error = [NSError errorWithDomain:@"NativeScriptRuntime" 
                                                code:1001 
                                            userInfo:@{NSLocalizedDescriptionKey: @"File path is required"}];
-            dispatch_async(dispatch_get_main_queue(), ^{
+            if (runOnMainThread) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
+            } else {
                 completion(nil, error);
-            });
+            }
         }
         return;
     }
@@ -136,9 +147,13 @@ std::unique_ptr<Runtime> runtime_;
             NSError* error = [NSError errorWithDomain:@"NativeScriptRuntime" 
                                                code:1002 
                                            userInfo:@{NSLocalizedDescriptionKey: @"Runtime not initialized"}];
-            dispatch_async(dispatch_get_main_queue(), ^{
+            if (runOnMainThread) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
+            } else {
                 completion(nil, error);
-            });
+            }
         }
         return;
     }
@@ -162,9 +177,13 @@ std::unique_ptr<Runtime> runtime_;
                                                code:1003 
                                            userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Failed to read file: %@", filePath]}];
                 }
-                dispatch_async(dispatch_get_main_queue(), ^{
+                if (runOnMainThread) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completionCopy(nil, error);
+                    });
+                } else {
                     completionCopy(nil, error);
-                });
+                }
                 return;
             }
             
@@ -196,10 +215,14 @@ std::unique_ptr<Runtime> runtime_;
                                    userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Script execution failed: %@", exception.reason]}];
         }
         
-        // Call completion on main thread
-        dispatch_async(dispatch_get_main_queue(), ^{
+        // Call completion on main thread or current thread based on parameter
+        if (runOnMainThread) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completionCopy(resultObj, error);
+            });
+        } else {
             completionCopy(resultObj, error);
-        });
+        }
     });
 }
 

@@ -6,16 +6,31 @@ This API allows you to execute JavaScript script files asynchronously from Objec
 
 ## Objective-C API
 
-### Method Signature
+### Method Signatures
+
+#### Standard Method (Main Thread Completion)
 
 ```objective-c
 - (void)runScriptFileAsync:(NSString*)filePath
                 completion:(void(^)(id result, NSError* error))completion;
 ```
 
+This method executes the script asynchronously and calls the completion handler on the main thread.
+
+#### Extended Method (Configurable Thread)
+
+```objective-c
+- (void)runScriptFileAsync:(NSString*)filePath
+          runOnMainThread:(BOOL)runOnMainThread
+                completion:(void(^)(id result, NSError* error))completion;
+```
+
+This method allows you to specify whether the completion handler should be called on the main thread or on the background thread where the script was executed.
+
 ### Parameters
 
 - `filePath`: The absolute file path to the JavaScript file to execute
+- `runOnMainThread`: (Optional) YES to call completion on main thread, NO to call on background thread. Defaults to YES if using the standard method.
 - `completion`: A completion handler block that receives:
   - `result`: The result of the script execution, converted to an Objective-C type
   - `error`: An NSError object if the operation failed, or nil on success
@@ -34,10 +49,12 @@ The result parameter can be one of the following Objective-C types, depending on
 
 ### Objective-C
 
+#### Default (Main Thread Completion)
+
 ```objective-c
 NativeScript* runtime = [[NativeScript alloc] initWithConfig:config];
 
-// Execute a script that returns a number
+// Execute a script that returns a number (completion on main thread)
 [runtime runScriptFileAsync:@"/path/to/script.js" 
                   completion:^(id result, NSError* error) {
     if (error) {
@@ -49,26 +66,57 @@ NativeScript* runtime = [[NativeScript alloc] initWithConfig:config];
         NSLog(@"Result: %@", result);
     }
 }];
+```
 
-// Execute a script that returns an object
+#### Background Thread Completion
+
+```objective-c
+// Execute a script with completion on background thread
+[runtime runScriptFileAsync:@"/path/to/script.js"
+            runOnMainThread:NO
+                  completion:^(id result, NSError* error) {
+    if (error) {
+        NSLog(@"Error: %@", error.localizedDescription);
+        return;
+    }
+    
+    // This code runs on a background thread
+    // Perform non-UI work here
+    NSLog(@"Result: %@ (on background thread)", result);
+    
+    // If you need to update UI, dispatch to main thread
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Update UI here
+    });
+}];
+```
+
+#### Explicit Main Thread Completion
+
+```objective-c
+// Explicitly specify main thread completion
 [runtime runScriptFileAsync:@"/path/to/object-script.js"
+            runOnMainThread:YES
                   completion:^(id result, NSError* error) {
     if (!error && [result isKindOfClass:[NSDictionary class]]) {
         NSDictionary* dict = (NSDictionary*)result;
         NSLog(@"Name: %@", dict[@"name"]);
         NSLog(@"Value: %@", dict[@"value"]);
+        // Safe to update UI directly here
     }
 }];
 ```
 
 ### Swift
 
+#### Default (Main Thread Completion)
+
 ```swift
 let config = Config()
 config.baseDir = Bundle.main.resourcePath
 let runtime = NativeScript(config: config)
 
-// Execute a script that returns a number
+// Execute a script that returns a number (completion on main thread)
 runtime.runScriptFileAsync("/path/to/script.js") { result, error in
     if let error = error {
         print("Error: \(error.localizedDescription)")
@@ -79,9 +127,34 @@ runtime.runScriptFileAsync("/path/to/script.js") { result, error in
         print("Result: \(number)")
     }
 }
+```
 
-// Execute a script that returns an object
-runtime.runScriptFileAsync("/path/to/object-script.js") { result, error in
+#### Background Thread Completion
+
+```swift
+// Execute a script with completion on background thread
+runtime.runScriptFileAsync("/path/to/script.js", runOnMainThread: false) { result, error in
+    guard error == nil else {
+        print("Error: \(error!.localizedDescription)")
+        return
+    }
+    
+    // This code runs on a background thread
+    // Perform non-UI work here
+    print("Result: \(result ?? "nil") (on background thread)")
+    
+    // If you need to update UI, dispatch to main thread
+    DispatchQueue.main.async {
+        // Update UI here
+    }
+}
+```
+
+#### Explicit Main Thread Completion
+
+```swift
+// Explicitly specify main thread completion
+runtime.runScriptFileAsync("/path/to/object-script.js", runOnMainThread: true) { result, error in
     guard error == nil else {
         print("Error: \(error!.localizedDescription)")
         return
@@ -90,6 +163,7 @@ runtime.runScriptFileAsync("/path/to/object-script.js") { result, error in
     if let dict = result as? [String: Any] {
         print("Name: \(dict["name"] ?? "N/A")")
         print("Value: \(dict["value"] ?? "N/A")")
+        // Safe to update UI directly here
     }
 }
 ```
@@ -164,8 +238,10 @@ Result: `NSDictionary` with "timestamp" and "message" keys
 
 - The file is read on a background thread to avoid blocking
 - The JavaScript execution uses proper V8 isolate locking for thread safety
-- The completion handler is always called on the main thread
+- The completion handler can be called on the main thread (default) or the background thread (if `runOnMainThread=NO`)
 - Multiple scripts can be executed concurrently
+- When using `runOnMainThread=YES` (default), it's safe to update UI directly in the completion handler
+- When using `runOnMainThread=NO`, you must dispatch to the main queue if you need to update UI
 
 ## Notes
 
@@ -173,3 +249,4 @@ Result: `NSDictionary` with "timestamp" and "message" keys
 - The script is executed in the same runtime context as the main application
 - All global variables and functions defined in the main app are accessible
 - Be cautious about long-running scripts as they will block the V8 isolate
+- Use `runOnMainThread=NO` when you need maximum performance and don't need to update UI immediately

@@ -175,6 +175,54 @@
     }];
 }
 
+/// Example 7: Execute script with background thread completion for performance
+- (void)executeWithBackgroundCompletion {
+    NSString* script = @"(function() { return 42 * 2; })()";
+    NSString* scriptPath = [self createTempScriptWithContent:script];
+    
+    // Execute with completion on background thread
+    [self.runtime runScriptFileAsync:scriptPath
+                    runOnMainThread:NO
+                         completion:^(id result, NSError* error) {
+        if (error) {
+            NSLog(@"Error: %@", error.localizedDescription);
+            return;
+        }
+        
+        // This runs on background thread
+        NSLog(@"Result on background thread: %@", result);
+        
+        // If you need to update UI, dispatch to main thread
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSLog(@"Now on main thread for UI updates");
+        });
+    }];
+}
+
+/// Example 8: Data processing with background completion
+- (void)executeDataProcessingOnBackground {
+    NSString* script = @"(function() {\n"
+                        "    const data = Array.from({length: 1000}, (_, i) => i);\n"
+                        "    return data.reduce((sum, val) => sum + val, 0);\n"
+                        "})()";
+    NSString* scriptPath = [self createTempScriptWithContent:script];
+    
+    // Process data on background thread for better performance
+    [self.runtime runScriptFileAsync:scriptPath
+                    runOnMainThread:NO
+                         completion:^(id result, NSError* error) {
+        if (error) {
+            NSLog(@"Error: %@", error.localizedDescription);
+            return;
+        }
+        
+        if ([result isKindOfClass:[NSNumber class]]) {
+            NSLog(@"Sum calculated on background: %@", result);
+            // Result: 499500
+        }
+    }];
+}
+
 // MARK: - Helper Methods
 
 - (NSString*)createTempScriptWithContent:(NSString*)content {

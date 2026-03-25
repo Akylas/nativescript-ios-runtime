@@ -184,4 +184,86 @@ describe("Async Script Execution API", function () {
     });
   });
 
+  // Tests for background thread completion (runOnMainThread=NO)
+  
+  it("should execute script with completion on background thread", function (done) {
+    const tempPath = NSTemporaryDirectory().stringByAppendingPathComponent("test-background-thread.js");
+    const scriptContent = "42";
+    NSString.stringWithString(scriptContent).writeToFileAtomicallyEncodingError(tempPath, true, NSUTF8StringEncoding, null);
+    
+    TNSAsyncScriptTester.runScriptFileRunOnMainThreadCompletion(tempPath, false, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBeDefined();
+      expect(result).toBe(42);
+      
+      // Verify we're not on main thread
+      const isMainThread = NSThread.isMainThread;
+      expect(isMainThread).toBe(false);
+      done();
+    });
+  });
+
+  it("should execute script with completion on main thread when specified", function (done) {
+    const tempPath = NSTemporaryDirectory().stringByAppendingPathComponent("test-main-thread-explicit.js");
+    const scriptContent = "'Hello'";
+    NSString.stringWithString(scriptContent).writeToFileAtomicallyEncodingError(tempPath, true, NSUTF8StringEncoding, null);
+    
+    TNSAsyncScriptTester.runScriptFileRunOnMainThreadCompletion(tempPath, true, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBeDefined();
+      expect(result).toBe("Hello");
+      
+      // Verify we're on main thread
+      const isMainThread = NSThread.isMainThread;
+      expect(isMainThread).toBe(true);
+      done();
+    });
+  });
+
+  it("should handle errors on background thread when runOnMainThread=NO", function (done) {
+    const invalidPath = "/nonexistent/path/background-test.js";
+    
+    TNSAsyncScriptTester.runScriptFileRunOnMainThreadCompletion(invalidPath, false, function(result, error) {
+      expect(error).toBeDefined();
+      expect(result).toBeNull();
+      
+      // Verify we're not on main thread
+      const isMainThread = NSThread.isMainThread;
+      expect(isMainThread).toBe(false);
+      done();
+    });
+  });
+
+  it("should execute multiple scripts with mixed thread completion", function (done) {
+    let completedCount = 0;
+    const expectedCount = 2;
+    
+    const checkDone = function() {
+      completedCount++;
+      if (completedCount === expectedCount) {
+        done();
+      }
+    };
+    
+    // Script 1 - background thread completion
+    const tempPath1 = NSTemporaryDirectory().stringByAppendingPathComponent("test-mixed-1.js");
+    NSString.stringWithString("100").writeToFileAtomicallyEncodingError(tempPath1, true, NSUTF8StringEncoding, null);
+    TNSAsyncScriptTester.runScriptFileRunOnMainThreadCompletion(tempPath1, false, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBe(100);
+      expect(NSThread.isMainThread).toBe(false);
+      checkDone();
+    });
+    
+    // Script 2 - main thread completion
+    const tempPath2 = NSTemporaryDirectory().stringByAppendingPathComponent("test-mixed-2.js");
+    NSString.stringWithString("200").writeToFileAtomicallyEncodingError(tempPath2, true, NSUTF8StringEncoding, null);
+    TNSAsyncScriptTester.runScriptFileRunOnMainThreadCompletion(tempPath2, true, function(result, error) {
+      expect(error).toBeNull();
+      expect(result).toBe(200);
+      expect(NSThread.isMainThread).toBe(true);
+      checkDone();
+    });
+  });
+
 });
