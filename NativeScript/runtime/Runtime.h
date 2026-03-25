@@ -30,6 +30,8 @@ class Runtime {
 
   void RunScript(const std::string script);
 
+  v8::Local<v8::Value> RunScriptWithResult(const std::string script);
+
   static void Initialize();
 
   static Runtime* GetCurrentRuntime() { return currentRuntime_; }
