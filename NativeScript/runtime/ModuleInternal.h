@@ -12,7 +12,7 @@ class ModuleInternal {
   bool RunModule(v8::Isolate* isolate, std::string path);
   void RunScript(v8::Isolate* isolate, std::string script);
   v8::MaybeLocal<v8::Value> RunScriptWithResult(v8::Isolate* isolate,
-                                                std::string script);
+                                                const std::string& script);
 
  private:
   static void RequireCallback(const v8::FunctionCallbackInfo<v8::Value>& info);

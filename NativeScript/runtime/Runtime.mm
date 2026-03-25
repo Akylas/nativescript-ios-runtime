@@ -263,7 +263,7 @@ void Runtime::RunScript(const std::string script) {
   this->moduleInternal_->RunScript(isolate, script);
 }
 
-Local<Value> Runtime::RunScriptWithResult(const std::string script) {
+Local<Value> Runtime::RunScriptWithResult(const std::string& script) {
   Isolate* isolate = this->GetIsolate();
   // Note: Caller is responsible for locking the isolate
   // Do not add v8::Locker here to avoid double-locking

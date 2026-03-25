@@ -333,7 +333,7 @@ void ModuleInternal::RunScript(Isolate* isolate, std::string script) {
 }
 
 MaybeLocal<Value> ModuleInternal::RunScriptWithResult(Isolate* isolate,
-                                                     std::string script) {
+                                                     const std::string& script) {
   std::shared_ptr<Caches> cache = Caches::Get(isolate);
   Local<Context> context = cache->GetContext();
   return this->RunScriptString(isolate, context, script);
