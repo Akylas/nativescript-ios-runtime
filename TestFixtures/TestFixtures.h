@@ -25,3 +25,4 @@
 
 #import "TNSTestCommon.h"
 #import "TNSTestNativeCallbacks.h"
+#import "TNSAsyncScriptTester.h"

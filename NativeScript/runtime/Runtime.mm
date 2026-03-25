@@ -263,6 +263,20 @@ void Runtime::RunScript(const std::string script) {
   this->moduleInternal_->RunScript(isolate, script);
 }
 
+Local<Value> Runtime::RunScriptWithResult(const std::string& script) {
+  Isolate* isolate = this->GetIsolate();
+  // Note: Caller is responsible for locking the isolate
+  // Do not add v8::Locker here to avoid double-locking
+  Isolate::Scope isolate_scope(isolate);
+  HandleScope handle_scope(isolate);
+  MaybeLocal<Value> maybeResult = this->moduleInternal_->RunScriptWithResult(isolate, script);
+  Local<Value> result;
+  if (!maybeResult.ToLocal(&result)) {
+    return Undefined(isolate);
+  }
+  return result;
+}
+
 Isolate* Runtime::GetIsolate() { return this->isolate_; }
 
 const int Runtime::WorkerId() { return this->workerId_; }

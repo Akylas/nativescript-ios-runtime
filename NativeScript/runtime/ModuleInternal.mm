@@ -332,6 +332,13 @@ void ModuleInternal::RunScript(Isolate* isolate, std::string script) {
   this->RunScriptString(isolate, context, script);
 }
 
+MaybeLocal<Value> ModuleInternal::RunScriptWithResult(Isolate* isolate,
+                                                     const std::string& script) {
+  std::shared_ptr<Caches> cache = Caches::Get(isolate);
+  Local<Context> context = cache->GetContext();
+  return this->RunScriptString(isolate, context, script);
+}
+
 Local<v8::String> ModuleInternal::WrapModuleContent(Isolate* isolate, const std::string& path) {
   return tns::ReadModule(isolate, path);
 }

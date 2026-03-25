@@ -6,6 +6,7 @@
 #include "runtime/Helpers.h"
 #include "runtime/Runtime.h"
 #include "runtime/Tasks.h"
+#include "runtime/Caches.h"
 
 using namespace v8;
 using namespace tns;
@@ -116,6 +117,209 @@ std::unique_ptr<Runtime> runtime_;
     [self initializeWithConfig:config];
 }
 
+- (void)runScriptFileAsync:(NSString*)filePath 
+                completion:(void(^)(id result, NSError* error))completion {
+    // Call the extended method with runOnMainThread=YES and nil argument to maintain backward compatibility
+    [self runScriptFileAsync:filePath argument:nil runOnMainThread:YES completion:completion];
+}
+
+- (void)runScriptFileAsync:(NSString*)filePath
+          runOnMainThread:(BOOL)runOnMainThread
+                completion:(void(^)(id result, NSError* error))completion {
+    // Call the extended method with nil argument to maintain backward compatibility
+    [self runScriptFileAsync:filePath argument:nil runOnMainThread:runOnMainThread completion:completion];
+}
+
+- (void)runScriptFileAsync:(NSString*)filePath
+                  argument:(NSString*)argument
+          runOnMainThread:(BOOL)runOnMainThread
+                completion:(void(^)(id result, NSError* error))completion {
+    if (!filePath || [filePath length] == 0) {
+        if (completion) {
+            NSError* error = [NSError errorWithDomain:@"NativeScriptRuntime" 
+                                               code:1001 
+                                           userInfo:@{NSLocalizedDescriptionKey: @"File path is required"}];
+            if (runOnMainThread) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
+            } else {
+                completion(nil, error);
+            }
+        }
+        return;
+    }
+    
+    if (runtime_ == nullptr) {
+        if (completion) {
+            NSError* error = [NSError errorWithDomain:@"NativeScriptRuntime" 
+                                               code:1002 
+                                           userInfo:@{NSLocalizedDescriptionKey: @"Runtime not initialized"}];
+            if (runOnMainThread) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil, error);
+                });
+            } else {
+                completion(nil, error);
+            }
+        }
+        return;
+    }
+    
+    // Create a strong reference to the completion block to ensure it stays alive
+    void(^completionCopy)(id, NSError*) = [completion copy];
+    
+    // Execute on a background thread
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSError* error = nil;
+        id resultObj = nil;
+        
+        @try {
+            // Read the file
+            NSString* scriptContent = [NSString stringWithContentsOfFile:filePath 
+                                                               encoding:NSUTF8StringEncoding 
+                                                                  error:&error];
+            if (error || !scriptContent) {
+                if (!error) {
+                    error = [NSError errorWithDomain:@"NativeScriptRuntime" 
+                                               code:1003 
+                                           userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Failed to read file: %@", filePath]}];
+                }
+                if (runOnMainThread) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completionCopy(nil, error);
+                    });
+                } else {
+                    completionCopy(nil, error);
+                }
+                return;
+            }
+            
+            // Execute the script and get the result
+            std::string cppScript = std::string([scriptContent UTF8String]);
+            
+            // Get the isolate and execute with proper locking
+            Isolate* isolate = runtime_->GetIsolate();
+            
+            // Lock and execute
+            v8::Locker locker(isolate);
+            v8::Isolate::Scope isolate_scope(isolate);
+            v8::HandleScope handle_scope(isolate);
+            
+            // Get the context to set the global variable
+            std::shared_ptr<tns::Caches> cache = tns::Caches::Get(isolate);
+            v8::Local<v8::Context> context = cache->GetContext();
+            v8::Context::Scope context_scope(context);
+            
+            // Set the __scriptArgument global variable if an argument is provided
+            if (argument) {
+                v8::Local<v8::String> argValue = tns::ToV8String(isolate, [argument UTF8String]);
+                v8::Local<v8::Object> global = context->Global();
+                v8::Local<v8::String> argName = tns::ToV8String(isolate, "__scriptArgument");
+                global->Set(context, argName, argValue).Check();
+            }
+            
+            // Execute the script
+            v8::Local<v8::Value> result = runtime_->RunScriptWithResult(cppScript);
+            
+            // Drain any pending tasks
+            tns::Tasks::Drain();
+            
+            // Convert V8 value to Objective-C object
+            if (!result.IsEmpty()) {
+                resultObj = [self convertV8ValueToObjC:result isolate:isolate];
+            }
+            
+        } @catch (NSException* exception) {
+            error = [NSError errorWithDomain:@"NativeScriptRuntime" 
+                                       code:1004 
+                                   userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Script execution failed: %@", exception.reason]}];
+        }
+        
+        // Call completion on main thread or current thread based on parameter
+        if (runOnMainThread) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completionCopy(resultObj, error);
+            });
+        } else {
+            completionCopy(resultObj, error);
+        }
+    });
+}
+
+// Helper method to convert V8 values to Objective-C objects
+- (id)convertV8ValueToObjC:(v8::Local<v8::Value>)value isolate:(v8::Isolate*)isolate {
+    v8::HandleScope handle_scope(isolate);
+    std::shared_ptr<tns::Caches> cache = tns::Caches::Get(isolate);
+    v8::Local<v8::Context> context = cache->GetContext();
+    v8::Context::Scope context_scope(context);
+    
+    if (value->IsNull() || value->IsUndefined()) {
+        return [NSNull null];
+    }
+    
+    if (value->IsBoolean()) {
+        return [NSNumber numberWithBool:value->BooleanValue(isolate)];
+    }
+    
+    if (value->IsNumber()) {
+        return [NSNumber numberWithDouble:value->NumberValue(context).FromMaybe(0.0)];
+    }
+    
+    if (value->IsString()) {
+        v8::String::Utf8Value utf8(isolate, value);
+        return [NSString stringWithUTF8String:*utf8];
+    }
+    
+    if (value->IsArray()) {
+        v8::Local<v8::Array> array = value.As<v8::Array>();
+        NSMutableArray* result = [NSMutableArray arrayWithCapacity:array->Length()];
+        for (uint32_t i = 0; i < array->Length(); i++) {
+            v8::Local<v8::Value> element;
+            if (array->Get(context, i).ToLocal(&element)) {
+                id objcElement = [self convertV8ValueToObjC:element isolate:isolate];
+                if (objcElement) {
+                    [result addObject:objcElement];
+                } else {
+                    [result addObject:[NSNull null]];
+                }
+            }
+        }
+        return result;
+    }
+    
+    if (value->IsObject()) {
+        v8::Local<v8::Object> obj = value.As<v8::Object>();
+        v8::Local<v8::Array> propertyNames;
+        if (!obj->GetOwnPropertyNames(context).ToLocal(&propertyNames)) {
+            return [NSDictionary dictionary];
+        }
+        
+        NSMutableDictionary* result = [NSMutableDictionary dictionaryWithCapacity:propertyNames->Length()];
+        for (uint32_t i = 0; i < propertyNames->Length(); i++) {
+            v8::Local<v8::Value> key;
+            if (!propertyNames->Get(context, i).ToLocal(&key)) {
+                continue;
+            }
+            
+            v8::String::Utf8Value keyStr(isolate, key);
+            NSString* objcKey = [NSString stringWithUTF8String:*keyStr];
+            
+            v8::Local<v8::Value> val;
+            if (obj->Get(context, key).ToLocal(&val)) {
+                id objcVal = [self convertV8ValueToObjC:val isolate:isolate];
+                if (objcVal && objcKey) {
+                    [result setObject:objcVal forKey:objcKey];
+                }
+            }
+        }
+        return result;
+    }
+    
+    // For other types, return string representation
+    v8::String::Utf8Value utf8(isolate, value);
+    return [NSString stringWithUTF8String:*utf8];
+}
 
 
 @end
