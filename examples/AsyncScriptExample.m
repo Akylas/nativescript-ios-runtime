@@ -223,6 +223,87 @@
     }];
 }
 
+/// Example 9: Pass a string argument to a script
+- (void)executeWithArgument {
+    NSString* script = @"const message = __scriptArgument;\n"
+                        "return message.toUpperCase() + '!';";
+    NSString* scriptPath = [self createTempScriptWithContent:script];
+    
+    [self.runtime runScriptFileAsync:scriptPath
+                            argument:@"Hello from Objective-C"
+                    runOnMainThread:YES
+                         completion:^(id result, NSError* error) {
+        if (error) {
+            NSLog(@"Error: %@", error.localizedDescription);
+            return;
+        }
+        
+        if ([result isKindOfClass:[NSString class]]) {
+            NSLog(@"Result: %@", result);
+            // Output: HELLO FROM OBJECTIVE-C!
+        }
+    }];
+}
+
+/// Example 10: Pass JSON data as argument
+- (void)executeWithJSONArgument {
+    NSString* script = @"const data = JSON.parse(__scriptArgument);\n"
+                        "return {\n"
+                        "    userId: data.userId,\n"
+                        "    userName: data.name.toUpperCase(),\n"
+                        "    processed: true\n"
+                        "};";
+    NSString* scriptPath = [self createTempScriptWithContent:script];
+    
+    NSString* jsonData = @"{\"userId\":123,\"name\":\"john\"}";
+    
+    [self.runtime runScriptFileAsync:scriptPath
+                            argument:jsonData
+                    runOnMainThread:NO
+                         completion:^(id result, NSError* error) {
+        if (error) {
+            NSLog(@"Error: %@", error.localizedDescription);
+            return;
+        }
+        
+        if ([result isKindOfClass:[NSDictionary class]]) {
+            NSDictionary* dict = (NSDictionary*)result;
+            NSLog(@"User ID: %@", dict[@"userId"]);
+            NSLog(@"User Name: %@", dict[@"userName"]);
+            NSLog(@"Processed: %@", dict[@"processed"]);
+        }
+    }];
+}
+
+/// Example 11: Use argument in calculations
+- (void)executeCalculationWithArgument {
+    NSString* script = @"const input = parseFloat(__scriptArgument);\n"
+                        "return {\n"
+                        "    original: input,\n"
+                        "    squared: input * input,\n"
+                        "    cubed: input * input * input\n"
+                        "};";
+    NSString* scriptPath = [self createTempScriptWithContent:script];
+    
+    [self.runtime runScriptFileAsync:scriptPath
+                            argument:@"5"
+                    runOnMainThread:YES
+                         completion:^(id result, NSError* error) {
+        if (error) {
+            NSLog(@"Error: %@", error.localizedDescription);
+            return;
+        }
+        
+        if ([result isKindOfClass:[NSDictionary class]]) {
+            NSDictionary* dict = (NSDictionary*)result;
+            NSLog(@"Original: %@", dict[@"original"]);
+            NSLog(@"Squared: %@", dict[@"squared"]);
+            NSLog(@"Cubed: %@", dict[@"cubed"]);
+            // Output: Original: 5, Squared: 25, Cubed: 125
+        }
+    }];
+}
+
 // MARK: - Helper Methods
 
 - (NSString*)createTempScriptWithContent:(NSString*)content {

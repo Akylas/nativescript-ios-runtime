@@ -2,7 +2,7 @@
 
 ## Overview
 
-This API allows you to execute JavaScript script files asynchronously from Objective-C or Swift code and receive the results via a completion handler.
+This API allows you to execute JavaScript script files asynchronously from Objective-C or Swift code and receive the results via a completion handler. You can optionally pass a string argument to the script.
 
 ## Objective-C API
 
@@ -27,9 +27,21 @@ This method executes the script asynchronously and calls the completion handler 
 
 This method allows you to specify whether the completion handler should be called on the main thread or on the background thread where the script was executed.
 
+#### Full Method (With Argument)
+
+```objective-c
+- (void)runScriptFileAsync:(NSString*)filePath
+                  argument:(NSString*)argument
+          runOnMainThread:(BOOL)runOnMainThread
+                completion:(void(^)(id result, NSError* error))completion;
+```
+
+This method allows you to pass a string argument to the script, which will be available as a global variable `__scriptArgument` in JavaScript.
+
 ### Parameters
 
 - `filePath`: The absolute file path to the JavaScript file to execute
+- `argument`: (Optional) A string argument that will be accessible in JavaScript as `__scriptArgument`. Can be nil.
 - `runOnMainThread`: (Optional) YES to call completion on main thread, NO to call on background thread. Defaults to YES if using the standard method.
 - `completion`: A completion handler block that receives:
   - `result`: The result of the script execution, converted to an Objective-C type
@@ -107,6 +119,44 @@ NativeScript* runtime = [[NativeScript alloc] initWithConfig:config];
 }];
 ```
 
+#### Passing Arguments to Scripts
+
+```objective-c
+// Pass a string argument to the script
+[runtime runScriptFileAsync:@"/path/to/script.js"
+                    argument:@"Hello from Objective-C"
+            runOnMainThread:YES
+                  completion:^(id result, NSError* error) {
+    if (!error) {
+        NSLog(@"Script result: %@", result);
+    }
+}];
+
+// The JavaScript can access the argument:
+// script.js:
+// const message = __scriptArgument;
+// return message.toUpperCase();
+```
+
+```objective-c
+// Pass JSON data as a string argument
+NSString* jsonData = @"{\"userId\":123,\"action\":\"process\"}";
+[runtime runScriptFileAsync:@"/path/to/processor.js"
+                    argument:jsonData
+            runOnMainThread:NO
+                  completion:^(id result, NSError* error) {
+    // Process result on background thread
+    if (!error) {
+        NSLog(@"Processed: %@", result);
+    }
+}];
+
+// The JavaScript can parse and use the argument:
+// processor.js:
+// const data = JSON.parse(__scriptArgument);
+// return { userId: data.userId, status: 'completed' };
+```
+
 ### Swift
 
 #### Default (Main Thread Completion)
@@ -166,6 +216,73 @@ runtime.runScriptFileAsync("/path/to/object-script.js", runOnMainThread: true) {
         // Safe to update UI directly here
     }
 }
+```
+
+#### Passing Arguments to Scripts
+
+```swift
+// Pass a string argument to the script
+runtime.runScriptFileAsync("/path/to/script.js", 
+                          argument: "Hello from Swift",
+                          runOnMainThread: true) { result, error in
+    guard error == nil else {
+        print("Error: \(error!.localizedDescription)")
+        return
+    }
+    
+    print("Script result: \(result ?? "nil")")
+}
+
+// The JavaScript can access the argument:
+// script.js:
+// const message = __scriptArgument;
+// return message.toUpperCase();
+```
+
+```swift
+// Pass JSON data as a string argument
+let jsonData = "{\"userId\":123,\"action\":\"process\"}"
+runtime.runScriptFileAsync("/path/to/processor.js",
+                          argument: jsonData,
+                          runOnMainThread: false) { result, error in
+    // Process result on background thread
+    guard error == nil else {
+        print("Error: \(error!.localizedDescription)")
+        return
+    }
+    
+    print("Processed: \(result ?? "nil")")
+}
+
+// The JavaScript can parse and use the argument:
+// processor.js:
+// const data = JSON.parse(__scriptArgument);
+// return { userId: data.userId, status: 'completed' };
+```
+
+## JavaScript Access to Arguments
+
+When a script is executed with an argument, it's available as a global variable in JavaScript:
+
+```javascript
+// Direct access
+const arg = __scriptArgument;
+
+// Via global object
+const arg = global.__scriptArgument;
+
+// Check if argument was provided
+if (typeof __scriptArgument !== 'undefined') {
+    // Use the argument
+    console.log('Received:', __scriptArgument);
+}
+
+// Parse JSON argument
+const data = JSON.parse(__scriptArgument);
+
+// Use argument in computation
+const result = __scriptArgument.toUpperCase();
+return result;
 ```
 
 ## Error Handling
@@ -250,3 +367,7 @@ Result: `NSDictionary` with "timestamp" and "message" keys
 - All global variables and functions defined in the main app are accessible
 - Be cautious about long-running scripts as they will block the V8 isolate
 - Use `runOnMainThread=NO` when you need maximum performance and don't need to update UI immediately
+- The `__scriptArgument` global variable is only set when an argument is provided (not nil)
+- If no argument is provided, `__scriptArgument` will be undefined in JavaScript
+- You can pass any string as an argument, including JSON strings for complex data
+- The argument is available throughout the entire script execution

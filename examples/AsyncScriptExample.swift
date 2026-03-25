@@ -154,6 +154,88 @@ class AsyncScriptExample {
         }
     }
     
+    /// Example 7: Pass a string argument to a script
+    func executeWithArgument() {
+        let script = """
+        const message = __scriptArgument;
+        return message.toUpperCase() + '!';
+        """
+        let scriptPath = createTempScript(content: script)
+        
+        runtime.runScriptFileAsync(scriptPath, 
+                                  argument: "Hello from Swift",
+                                  runOnMainThread: true) { result, error in
+            guard error == nil else {
+                print("Error: \(error!.localizedDescription)")
+                return
+            }
+            
+            if let message = result as? String {
+                print("Result: \(message)")
+                // Output: HELLO FROM SWIFT!
+            }
+        }
+    }
+    
+    /// Example 8: Pass JSON data as argument
+    func executeWithJSONArgument() {
+        let script = """
+        const data = JSON.parse(__scriptArgument);
+        return {
+            userId: data.userId,
+            userName: data.name.toUpperCase(),
+            processed: true
+        };
+        """
+        let scriptPath = createTempScript(content: script)
+        
+        let jsonData = "{\"userId\":123,\"name\":\"john\"}"
+        
+        runtime.runScriptFileAsync(scriptPath,
+                                  argument: jsonData,
+                                  runOnMainThread: false) { result, error in
+            guard error == nil else {
+                print("Error: \(error!.localizedDescription)")
+                return
+            }
+            
+            if let dict = result as? [String: Any] {
+                print("User ID: \(dict["userId"] ?? "N/A")")
+                print("User Name: \(dict["userName"] ?? "N/A")")
+                print("Processed: \(dict["processed"] ?? false)")
+            }
+        }
+    }
+    
+    /// Example 9: Use argument in calculations
+    func executeCalculationWithArgument() {
+        let script = """
+        const input = parseFloat(__scriptArgument);
+        return {
+            original: input,
+            squared: input * input,
+            cubed: input * input * input
+        };
+        """
+        let scriptPath = createTempScript(content: script)
+        
+        runtime.runScriptFileAsync(scriptPath,
+                                  argument: "5",
+                                  runOnMainThread: true) { result, error in
+            guard error == nil else {
+                print("Error: \(error!.localizedDescription)")
+                return
+            }
+            
+            if let dict = result as? [String: Any] {
+                print("Original: \(dict["original"] ?? 0)")
+                print("Squared: \(dict["squared"] ?? 0)")
+                print("Cubed: \(dict["cubed"] ?? 0)")
+                // Output: Original: 5, Squared: 25, Cubed: 125
+            }
+        }
+    }
+    
     // MARK: - Helper Methods
     
     private func createTempScript(content: String) -> String {
