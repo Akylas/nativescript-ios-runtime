@@ -155,37 +155,6 @@ class AsyncScriptExample {
     }
     
     // MARK: - Helper Methods
-        let scripts = [
-            "Math.sqrt(16)",
-            "'Concurrent execution'",
-            "[1, 2, 3].length"
-        ]
-        
-        var results: [String: Any] = [:]
-        let group = DispatchGroup()
-        
-        for (index, scriptContent) in scripts.enumerated() {
-            group.enter()
-            let scriptPath = createTempScript(content: scriptContent)
-            
-            runtime.runScriptFileAsync(scriptPath) { result, error in
-                defer { group.leave() }
-                
-                if let error = error {
-                    print("Script \(index) error: \(error.localizedDescription)")
-                    return
-                }
-                
-                results["script_\(index)"] = result
-            }
-        }
-        
-        group.notify(queue: .main) {
-            print("All scripts completed. Results: \(results)")
-        }
-    }
-    
-    // MARK: - Helper Methods
     
     private func createTempScript(content: String) -> String {
         let tempDir = NSTemporaryDirectory()
