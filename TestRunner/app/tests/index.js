@@ -80,6 +80,22 @@ require("./RuntimeImplementedAPIs");
 
 require("./Timers");
 
+// require("./URL");
+// require("./URLSearchParams");
+// require("./URLPattern");
+
+// HTTP ESM Loader tests
+require("./HttpEsmLoaderTests");
+
+// Remote Module Security tests
+require("./RemoteModuleSecurityTests");
+
+// Node built-in and optional module resolution tests (ESM)
+require("./NodeBuiltinsAndOptionalModulesTests.mjs");
+
+// Exception handling tests
+require("./ExceptionHandlingTests");
+
 // Tests common for all runtimes.
 require("./shared/index").runAllTests();
 

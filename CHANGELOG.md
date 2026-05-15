@@ -1,3 +1,52 @@
+## [9.0.3](https://github.com/NativeScript/ios/compare/v9.0.2...v9.0.3) (2026-01-04)
+
+
+### Features
+
+* remote module security ([#331](https://github.com/NativeScript/ios/issues/331)) ([721ceaf](https://github.com/NativeScript/ios/commit/721ceafe2606ff25786529acb9a4c727cfa84d78))
+
+
+
+## [9.0.2](https://github.com/NativeScript/ios/compare/v9.0.1...v9.0.2) (2025-12-14)
+
+
+### Bug Fixes
+
+* http realm cache key with query params ([#328](https://github.com/NativeScript/ios/issues/328)) ([f0c9df3](https://github.com/NativeScript/ios/commit/f0c9df35ecf01aaad340d325b0fba3f8ec083eae))
+* http realm normalization ([faa6762](https://github.com/NativeScript/ios/commit/faa67626695f133f5d37dca09aaab957214c7bd2))
+* URLSearchParams.forEach() crash and spec compliance ([#327](https://github.com/NativeScript/ios/issues/327)) ([28242ec](https://github.com/NativeScript/ios/commit/28242ecc3bc52875f7ffe13ae1665224026191a3))
+
+
+
+## [9.0.1](https://github.com/NativeScript/ios/compare/v9.0.0...v9.0.1) (2025-11-25)
+
+
+### Bug Fixes
+
+* node built-in modules handling ([#319](https://github.com/NativeScript/ios/issues/319)) ([f748751](https://github.com/NativeScript/ios/commit/f748751c74968ea015c8abff30fe86bfacd84930))
+* **runtime:** app path substr considerations ([#314](https://github.com/NativeScript/ios/issues/314)) ([fd2703d](https://github.com/NativeScript/ios/commit/fd2703d59e6ba2472d8baefe014f0afc4c8952df))
+
+
+
+# [9.0.0](https://github.com/NativeScript/ios/compare/v8.9.5...v9.0.0) (2025-11-17)
+
+
+### Bug Fixes
+
+* optional error parameter for NSError out parameters ([#310](https://github.com/NativeScript/ios/issues/310)) ([99824ec](https://github.com/NativeScript/ios/commit/99824eca41c1ae7fb939a6790ae83f6e2bc41574))
+* **visionos:** build flags ([29e5d79](https://github.com/NativeScript/ios/commit/29e5d79924ae65c32f93f8cb19aece4ef6f370fd))
+* **visionos:** linker robustness ([14355d5](https://github.com/NativeScript/ios/commit/14355d5647e4b61c60be3fb87282d441575f1de0))
+
+
+### Features
+
+* Ada 3.3.0 ([#313](https://github.com/NativeScript/ios/issues/313)) ([e24388c](https://github.com/NativeScript/ios/commit/e24388c9261bcbf9c2580abf76cffdc87b6d2bf6))
+* ES modules (ESM) support with conditional esm or commonjs consumption + better error handling ([#276](https://github.com/NativeScript/ios/issues/276)) ([e72977a](https://github.com/NativeScript/ios/commit/e72977ab9a1059a8e9686c169f3090c6fdcee398))
+* http loaded es module realms + HMR DX enrichments ([#312](https://github.com/NativeScript/ios/issues/312)) ([59191d3](https://github.com/NativeScript/ios/commit/59191d3b921c29346bbfeb4f0947f13e5b08288e))
+* support for struct reference index access ([#304](https://github.com/NativeScript/ios/issues/304)) ([d289232](https://github.com/NativeScript/ios/commit/d2892320e773cc12729f3b6edc5da683534aef9b))
+
+
+
 ## [8.9.5](https://github.com/NativeScript/ios/compare/v8.9.4...v8.9.5) (2025-10-24)
 
 

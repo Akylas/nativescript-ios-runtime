@@ -263,6 +263,58 @@ describe(module.id, function () {
         TNSClearOutput();
     });
 
+    it("should respect ArrayBufferView byteOffset when wrapping in NSData", function () {
+        var source = new Uint8Array([48, 49, 50, 51, 52, 53]);
+        var view = new Uint8Array(source.buffer, 1, 4);
+
+        var wrappedArrayBufferViewData = TNSObjCTypes.alloc().init().methodWithNSData(view);
+
+        expect(TNSGetOutput()).toBe('1234');
+        expect(wrappedArrayBufferViewData).toBe(view);
+        TNSClearOutput();
+    });
+
+    it("should respect ArrayBufferView byteOffset when mutating NSMutableData", function () {
+        var source = new Uint8Array([48, 49, 50, 51, 52]);
+        var view = new Uint8Array(source.buffer, 2, 2);
+
+        var wrappedArrayBufferViewData = TNSObjCTypes.alloc().init().methodWithNSMutableData(view);
+
+        expect(wrappedArrayBufferViewData).toBe(view);
+        expect(source[0]).toEqual(48);
+        expect(source[1]).toEqual(49);
+        expect(source[2]).toEqual(65);
+        expect(source[3]).toEqual(51);
+        expect(source[4]).toEqual(52);
+    });
+
+    it("should wrap a SharedArrayBuffer in NSData", function () {
+        var sab = new SharedArrayBuffer(4);
+        var view = new Uint8Array(sab);
+        view[0] = 49; view[1] = 50; view[2] = 51; view[3] = 52;
+
+        var result = TNSObjCTypes.alloc().init().methodWithNSData(sab);
+
+        expect(TNSGetOutput()).toBe('1234');
+        expect(result).toBe(sab);
+        TNSClearOutput();
+    });
+
+    it("should mutate a SharedArrayBuffer via NSMutableData", function () {
+        var sab = new SharedArrayBuffer(4);
+        var view = new Uint8Array(sab);
+        view[0] = 48; view[1] = 49; view[2] = 50; view[3] = 51;
+
+        var result = TNSObjCTypes.alloc().init().methodWithNSMutableData(sab);
+
+        expect(result).toBe(sab);
+        var after = new Uint8Array(sab);
+        expect(after[0]).toEqual(65);
+        expect(after[1]).toEqual(49);
+        expect(after[2]).toEqual(50);
+        expect(after[3]).toEqual(51);
+    });
+
     it("should be possible to wrap NSData in an ArrayBuffer", function () {
         var data = NSString.stringWithString("test").dataUsingEncoding(NSUTF8StringEncoding);
 
@@ -272,11 +324,143 @@ describe(module.id, function () {
         //expect(interop.handleof(buffer)).toBe(data.bytes);
     });
 
+    it("interop.bufferFromData keeps NSData alive across autorelease drain + GC", function (done) {
+        // The bug requires a MALLOC_LARGE allocation (>= 32 KB on iOS): tiny
+        // allocations retain their bytes after free, so a stale pointer would
+        // happen to read valid content. 64 KB plaintext -> ~87 KB base64 puts
+        // enc squarely in the libmalloc large cache, which deterministically
+        // reuses freed regions for a matching-size next allocation.
+        var inputSize = 1 << 16;
+        var plaintext = new Uint8Array(inputSize);
+        for (var i = 0; i < inputSize; i++) plaintext[i] = i & 0xff;
+
+        // base64 of [0, 1, 2, 3, 4, 5] starts with "AAECAwQF" (ASCII).
+        var expectedPrefix = [0x41, 0x41, 0x45, 0x43, 0x41, 0x77, 0x51, 0x46];
+
+        var view;
+        (function () {
+            var src = NSData.alloc().initWithBytesLength(plaintext, inputSize);
+            // base64EncodedDataWithOptions returns an autoreleased NSData.
+            var enc = src.base64EncodedDataWithOptions(0);
+            view = new Uint8Array(interop.bufferFromData(enc));
+            // src and enc are pure IIFE locals — no closure captures them — so
+            // their JS wrappers become unreachable when this function returns.
+        })();
+
+        // One yield is enough to drain the autorelease pool (removes enc's
+        // autorelease +1); the gc() then finalizes the src/enc JS wrappers
+        // (removes their wrapper +1, see ArgConverter::CreateJsWrapper).
+        // Without the bufferFromData fix, enc is now freed.
+        setTimeout(function () {
+            gc();
+
+            // Allocate a same-sized NSData filled with a sentinel to push the
+            // libmalloc large cache into reusing enc's freed VM region.
+            var fillerSize = view.byteLength;
+            var sentinel = new Uint8Array(fillerSize);
+            sentinel.fill(0xab);
+            var reused = NSData.alloc().initWithBytesLength(sentinel, fillerSize);
+
+            // byteLength lives on the ArrayBuffer record, not via the data
+            // pointer, so it stays correct even with a stale pointer.
+            expect(view.byteLength).toBe(Math.ceil(inputSize / 3) * 4);
+            // Reading bytes dereferences the data pointer. Pre-fix this reads
+            // 0xab (sentinel content that landed in enc's freed slot); post-fix
+            // the BackingStore deleter keeps enc alive and we read the
+            // original base64 bytes.
+            for (var i = 0; i < expectedPrefix.length; i++) {
+                expect(view[i]).toBe(expectedPrefix[i]);
+            }
+            // Spot-check a byte the sentinel would have stamped over.
+            expect(view[fillerSize - 1]).not.toBe(0xab);
+
+            void reused; // keep referenced so its wrapper doesn't GC mid-spec
+            done();
+        }, 0);
+    });
+
+    it("interop.bufferFromData survives repeated alloc/yield/GC cycles", function (done) {
+        // Same MALLOC_LARGE shape as the single-shot repro above.
+        var inputSize = 1 << 16;
+        var plaintext = new Uint8Array(inputSize);
+        for (var i = 0; i < inputSize; i++) plaintext[i] = i & 0xff;
+
+        // Production bug surfaced in <4s; with explicit gc() forcing wrapper
+        // finalization every iteration, a handful of cycles is plenty to
+        // catch a regression.
+        var iterations = 4;
+        var i = 0;
+        var pending = null;
+
+        // Scope ns/enc inside this helper so they become unreachable when it
+        // returns; the next yield + gc() then finalizes their wrappers.
+        function alloc() {
+            var ns = NSData.alloc().initWithBytesLength(plaintext, inputSize);
+            var enc = ns.base64EncodedDataWithOptions(0);
+            return new Uint8Array(interop.bufferFromData(enc));
+        }
+
+        function step() {
+            if (pending !== null) {
+                // Previous setTimeout drained the autorelease pool; finalize
+                // the ns/enc wrappers. Without the fix, enc is now freed.
+                gc();
+
+                // First-byte check is enough — a stale pointer post-recycle
+                // reads the sentinel/new-alloc bytes which won't be 0x41.
+                expect(pending[0]).toBe(0x41);
+                expect(pending[pending.byteLength - 1]).not.toBe(0);
+                pending = null;
+            }
+
+            if (i >= iterations) {
+                expect(i).toBe(iterations);
+                done();
+                return;
+            }
+
+            pending = alloc();
+            i++;
+            setTimeout(step, 0);
+        }
+
+        step();
+    });
+
     it("should be possible to marshal an ArrayBuffer as void* parameter", () => {
         var data = NSData.alloc().initWithBase64EncodedStringOptions("MTIzNDU=", NSDataBase64DecodingIgnoreUnknownCharacters);
         var arr = new ArrayBuffer(5);
         data.getBytes(arr);
         const actual = new Uint8Array(arr);
+        expect(actual[0]).toEqual(49);
+        expect(actual[1]).toEqual(50);
+        expect(actual[2]).toEqual(51);
+        expect(actual[3]).toEqual(52);
+        expect(actual[4]).toEqual(53);
+    });
+
+    it("should respect ArrayBufferView byteOffset when marshalling as void* parameter", () => {
+        var data = NSData.alloc().initWithBase64EncodedStringOptions("MTIzNDU=", NSDataBase64DecodingIgnoreUnknownCharacters);
+        var arr = new ArrayBuffer(7);
+        var prefill = new Uint8Array(arr);
+        prefill[0] = 65; prefill[5] = 66; prefill[6] = 67;
+        var view = new Uint8Array(arr, 1, 5);
+        data.getBytesLength(view, 5);
+        var result = new Uint8Array(arr);
+        expect(result[0]).toEqual(65);
+        expect(result[1]).toEqual(49);
+        expect(result[2]).toEqual(50);
+        expect(result[3]).toEqual(51);
+        expect(result[4]).toEqual(52);
+        expect(result[5]).toEqual(53);
+        expect(result[6]).toEqual(67);
+    });
+
+    it("should marshal a SharedArrayBuffer as void* parameter", () => {
+        var data = NSData.alloc().initWithBase64EncodedStringOptions("MTIzNDU=", NSDataBase64DecodingIgnoreUnknownCharacters);
+        var sab = new SharedArrayBuffer(5);
+        data.getBytes(sab);
+        var actual = new Uint8Array(sab);
         expect(actual[0]).toEqual(49);
         expect(actual[1]).toEqual(50);
         expect(actual[2]).toEqual(51);
@@ -371,5 +555,24 @@ describe(module.id, function () {
 
         expect(typeof array.firstObject).toEqual("boolean");
         expect(array.firstObject).toEqual(bool);
+    });
+
+    it("NSErrorOutParameterWithNullabilityAnnotations", function () {
+        expect(function () {
+            TNSApi.new().methodNullableError(0);
+        }).not.toThrow();
+
+        var isThrown = false;
+        try {
+            TNSApi.new().methodNullableError(1);
+        } catch (e) {
+            isThrown = true;
+            expect(e.stack).toEqual(jasmine.any(String));
+        }
+        expect(isThrown).toBe(true);
+
+        var errorRef = new interop.Reference();
+        TNSApi.new().methodNullableError(1, errorRef);
+        expect(errorRef.value instanceof NSError).toBe(true);
     });
 });
