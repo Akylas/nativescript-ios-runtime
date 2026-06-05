@@ -122,7 +122,7 @@ void Console::LogCallback(const FunctionCallbackInfo<Value>& args) {
   SendToDevToolsFrontEnd(method, args);
   std::string msgWithVerbosity =
       "CONSOLE " + verbosityLevelUpper + ": " + msgToLog;
-  Log("%s", msgWithVerbosity.c_str());
+  SplitAndLogInChunks(msgWithVerbosity);
 
   if (RuntimeConfig.IsDebug && Runtime::showErrorDisplay() && verbosityLevel == "error" && hasStackTrace) {
     try {
@@ -133,44 +133,8 @@ void Console::LogCallback(const FunctionCallbackInfo<Value>& args) {
     } catch (...) {
       Log("Console.cpp: Unknown exception updating modal");
     }
+  }
 
-    Isolate* isolate = args.GetIsolate();
-    std::string stringResult = BuildStringFromArgs(args);
-
-    Local<v8::String> data = args.Data().As<v8::String>();
-    std::string verbosityLevel = tns::ToString(isolate, data);
-    std::string verbosityLevelUpper = verbosityLevel;
-    std::transform(verbosityLevelUpper.begin(), verbosityLevelUpper.end(), verbosityLevelUpper.begin(), ::toupper);
-
-    std::stringstream ss;
-    ss << stringResult;
-
-    if (verbosityLevel == "trace") {
-        std::string stacktrace = tns::GetStackTrace(isolate);
-        ss << std::endl << stacktrace << std::endl;
-    }
-
-    std::string msgToLog = ss.str();
-
-    ConsoleAPIType method = VerbosityToInspectorMethod(verbosityLevel);
-    SendToDevToolsFrontEnd(method, args);
-    std::string msgWithVerbosity = "CONSOLE " + verbosityLevelUpper + ": " + msgToLog;
-
-    SplitAndLogInChunks(msgWithVerbosity);
-    // //Log("%s", msgWithVerbosity.c_str());
-    // auto messageLength = msgWithVerbosity.length();
-    // int maxStringLength = 1000; // technically 1024, but let's have some room :)
-
-    // if (messageLength < maxStringLength) {
-    //     // print normally
-    //     Log("%s", msgWithVerbosity.c_str());
-    // } else {
-    //     // split into chunks
-    //     for (int i = 0; i < messageLength; i += maxStringLength) {
-    //         std::string messagePart = msgWithVerbosity.substr(i, maxStringLength);
-    //         Log("%s", messagePart.c_str());
-    //     }
-    // }
 }
 
 void Console::AssertCallback(const FunctionCallbackInfo<Value>& args) {
