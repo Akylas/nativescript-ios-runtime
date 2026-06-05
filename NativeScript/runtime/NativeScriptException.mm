@@ -739,7 +739,7 @@ static void RenderErrorModalUI(v8::Isolate* isolate, const std::string& title,
 #else
   hasAnyWindows = app.windows.count > 0;
 #endif
-  if (!alreadyShowing && !hasAnyWindows && app.connectedScenes.count == 0) {
+  if (!alreadyShowing && !hasAnyWindows) {
     Log(@"Note: JavaScript error during boot.");
     Log(@"================================");
     Log(@"%s", stackForModal.c_str());

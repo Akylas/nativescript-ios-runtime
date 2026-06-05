@@ -159,26 +159,9 @@ void Console::AssertCallback(const FunctionCallbackInfo<Value>& args) {
 
     std::string log = ss.str();
 
-    int argsLength = args.Length();
-    bool expressionPasses = argsLength > 0 && args[0]->BooleanValue(isolate);
-    if (!expressionPasses) {
-        std::stringstream ss;
-
-        ss << "Assertion failed: ";
-
-        if (argsLength > 1) {
-            ss << BuildStringFromArgs(args, 1);
-        } else {
-            ss << "console.assert";
-        }
-
-        std::string log = ss.str();
-        
-        SendToDevToolsFrontEnd(ConsoleAPIType::kAssert, args);
-        
-        SplitAndLogInChunks(log);
-        // Log("%s", log.c_str());
-    }
+    SendToDevToolsFrontEnd(ConsoleAPIType::kAssert, args);
+    SplitAndLogInChunks(log);
+  }
 }
 
 void Console::DirCallback(const FunctionCallbackInfo<Value>& args) {
