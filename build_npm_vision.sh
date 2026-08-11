@@ -11,8 +11,10 @@ cp ./package.json "$OUTPUT_DIR"
 
 cp -r "./project-template-vision/" "$OUTPUT_DIR/framework"
 
-cp -r "dist/NativeScript.xcframework" "$OUTPUT_DIR/framework/internal"
-cp -r "dist/TKLiveSync.xcframework" "$OUTPUT_DIR/framework/internal"
+# -R, not -r: see build_npm_ios.sh — `cp -r` flattens the symlinks of versioned
+# framework bundles, which makes them unsignable.
+cp -R "dist/NativeScript.xcframework" "$OUTPUT_DIR/framework/internal"
+cp -R "dist/TKLiveSync.xcframework" "$OUTPUT_DIR/framework/internal"
 
 mkdir -p "$OUTPUT_DIR/framework/internal/metadata-generator-x86_64"
 cp -r "metadata-generator/dist/x86_64/." "$OUTPUT_DIR/framework/internal/metadata-generator-x86_64"
