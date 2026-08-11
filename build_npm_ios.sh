@@ -11,8 +11,12 @@ cp ./package.json "$OUTPUT_DIR"
 
 cp -r "project-template-ios/." "$OUTPUT_DIR/framework"
 
-cp -r "dist/NativeScript.xcframework" "$OUTPUT_DIR/framework/internal"
-cp -r "dist/TKLiveSync.xcframework" "$OUTPUT_DIR/framework/internal"
+# -R, not -r: the maccatalyst slices are versioned bundles, and `cp -r` follows the
+# Versions/Current, Headers, Resources and binary symlinks instead of copying them.
+# The flattened bundle is then invalid and codesign rejects it with
+# "code object is not signed at all".
+cp -R "dist/NativeScript.xcframework" "$OUTPUT_DIR/framework/internal"
+cp -R "dist/TKLiveSync.xcframework" "$OUTPUT_DIR/framework/internal"
 
 mkdir -p "$OUTPUT_DIR/framework/internal/metadata-generator-x86_64"
 cp -r "metadata-generator/dist/x86_64/." "$OUTPUT_DIR/framework/internal/metadata-generator-x86_64"
